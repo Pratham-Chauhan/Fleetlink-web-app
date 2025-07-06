@@ -1,0 +1,5 @@
+pandas
+playwright
+openpyxl
+flask
+# camoufox
