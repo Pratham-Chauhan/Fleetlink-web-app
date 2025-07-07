@@ -3,3 +3,5 @@ playwright
 openpyxl
 flask
 camoufox
+requests
+python-dotenv

@@ -1,3 +1,5 @@
+from dotenv import load_dotenv
+import requests
 from datetime import datetime
 import re
 import platform
@@ -52,7 +54,8 @@ class ATUScraper:
                 from camoufox.sync_api import Camoufox
                 from camoufox import DefaultAddons
             except ImportError:
-                self.logger.warning("Camoufox library is not installed. Please ensure it is installed before running this code.")
+                self.logger.warning(
+                    "Camoufox library is not installed. Please ensure it is installed before running this code.")
 
             browser = Camoufox(exclude_addons=[DefaultAddons.UBO], humanize=True, headless=headless).start()
             page = browser.new_page()
@@ -78,7 +81,6 @@ class ATUScraper:
 
         self.logger.info('Browser Type: %s', browser_type)
         return page
-
 
     def find_opera_path(self):
         system = platform.system()
@@ -139,7 +141,6 @@ class ATUScraper:
         self.logger.info(selector_target)
         select.select_option(selector_target)
         self.wait_random(2, 6)
-
 
     def branch_selection_part(self):
         self.wait_random(2, 5)
@@ -264,10 +265,10 @@ class ATUScraper:
         if target_service_group == 'HU/AU':
             if self.data['engine'] == "electric":
                 choose_service_name("HU für E-Fahrzeuge")
-            
+
             elif self.data['engine'] == 'fuel':
                 choose_service_name("HU/AU")
-    
+
         else:
             choose_service_name(self.data['service_name'][0], self.data['quantity_amount'])
 
@@ -358,12 +359,22 @@ class ATUScraper:
             self.logger.error("Service not found for FleetLink ID: %s", self.data["id_target"])
             sys.exit(1)
 
+    def send_to_telegram(self, image_path):
+        TOKEN = os.environ['TELEGRAM_BOT_TOKEN']
+        CHAT_ID = '5469717358'
+        url = f'https://api.telegram.org/bot{TOKEN}/sendPhoto'
+
+        with open(image_path, 'rb') as photo:
+            files = {'photo': photo}
+            data = {'chat_id': CHAT_ID, 'caption': str(self.timestamp) }
+            r = requests.post(url, files=files, data=data)
+            print(r.json())
+
     def run(self):
-        
+
         self.logger.info("Scraper started with data: %s", self.data)
         self.find_fleetlink_services()
         self.logger.info("Starting ATU automation...")
-
 
         self.page = self.launch_driver(self.BROWSER_TYPE, self.HEADLESS)
         self.page.goto("https://www.atu.de/terminvereinbarung/", timeout=60000)
@@ -376,9 +387,14 @@ class ATUScraper:
 
         # Full-page screenshot
         self.page.screenshot(path=f"screenshots/{self.timestamp}.png", full_page=True)
-    
+        
+        self.send_to_telegram(f'./screenshots/{self.timestamp}.png')
+
         self.logger.info('Script completed.')
         self.page.close()
+
+
+load_dotenv()
 
 
 if __name__ == "__main__":
@@ -392,7 +408,7 @@ if __name__ == "__main__":
         "target_year": "2011",
         "quantity_amount": "1",
         "target_date": "12.06.2025",
-        "engine": "electric", # electric/fuel
+        "engine": "electric",  # electric/fuel
 
         "your_data": {
             "firstName": "Dominik",
@@ -414,5 +430,3 @@ if __name__ == "__main__":
     timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
     scraper = ATUScraper(test_data, timestamp)
     scraper.run()
-
-
