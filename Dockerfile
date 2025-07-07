@@ -34,8 +34,8 @@ COPY requirements.txt .
 RUN pip install -r requirements.txt
 
 # Install Playwright browsers
-RUN playwright install chromium
-# RUN python -m camoufox fetch
+RUN playwright install chromium firefox
+RUN python -m camoufox fetch
 
 # Copy your project files
 COPY atu_scraper.py .

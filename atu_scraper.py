@@ -21,7 +21,7 @@ class ATUScraper:
         self.logger = self.setup_logger()
         self.input_file = "./fleetlink_id_mapping.xlsx"
 
-        self.BROWSER_TYPE = 'Opera'
+        self.BROWSER_TYPE = 'Camoufox'
         self.HEADLESS = True
 
     def setup_logger(self):
@@ -45,6 +45,40 @@ class ATUScraper:
         logger.addHandler(console_handler)
 
         return logger
+
+    def launch_driver(self, browser_type, headless):
+        if browser_type == 'Camoufox':
+            try:
+                from camoufox.sync_api import Camoufox
+                from camoufox import DefaultAddons
+            except ImportError:
+                self.logger.warning("Camoufox library is not installed. Please ensure it is installed before running this code.")
+
+            browser = Camoufox(exclude_addons=[DefaultAddons.UBO], humanize=True, headless=headless).start()
+            page = browser.new_page()
+
+        elif browser_type == 'Opera':
+            playwright = sync_playwright().start()
+            opera_path = self.find_opera_path()
+
+            if not opera_path:
+                self.logger.warning(f"Opera path not found, Fallback to Chromium")
+                browser_type = 'Chromium'
+                browser = playwright.chromium.launch(
+                    headless=headless, args=['--disable-blink-features=AutomationControlled'])
+            else:
+                browser = playwright.chromium.launch(headless=headless, executable_path=opera_path, args=[
+                    '--disable-blink-features=AutomationControlled', '--enable-vpn'])
+
+            context = browser.new_context(
+                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 OPR/106.0.0.0'
+            )
+            context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
+            page = context.new_page()
+
+        self.logger.info('Browser Type: %s', browser_type)
+        return page
+
 
     def find_opera_path(self):
         system = platform.system()
@@ -106,38 +140,6 @@ class ATUScraper:
         select.select_option(selector_target)
         self.wait_random(2, 6)
 
-    def launch_driver(self, browser_type, headless):
-        if browser_type == 'Camoufox':
-            try:
-                from camoufox.sync_api import Camoufox
-                from camoufox import DefaultAddons
-            except ImportError:
-                self.logger.warning("Camoufox library is not installed. Please ensure it is installed before running this code.")
-
-            browser = Camoufox(exclude_addons=[DefaultAddons.UBO], humanize=True, headless=headless).start()
-            page = browser.new_page()
-
-        elif browser_type == 'Opera':
-            playwright = sync_playwright().start()
-            opera_path = self.find_opera_path()
-
-            if not opera_path:
-                self.logger.warning(f"Opera path not found, Fallback to Chromium")
-                browser_type = 'Chromium'
-                browser = playwright.chromium.launch(
-                    headless=headless, args=['--disable-blink-features=AutomationControlled'])
-            else:
-                browser = playwright.chromium.launch(headless=headless, executable_path=opera_path, args=[
-                    '--disable-blink-features=AutomationControlled', '--enable-vpn'])
-
-            context = browser.new_context(
-                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36 OPR/106.0.0.0'
-            )
-            context.add_init_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-            page = context.new_page()
-
-        self.logger.info('Browser Type: %s', browser_type)
-        return page
 
     def branch_selection_part(self):
         self.wait_random(2, 5)
