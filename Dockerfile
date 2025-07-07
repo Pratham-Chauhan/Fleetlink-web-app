@@ -17,6 +17,10 @@ RUN apt-get update && apt-get install -y \
     libgtk-3-0 \
     libx11-xcb1 \
     libasound2 curl \
+    libgl1-mesa-glx \
+    libx11-6 \
+    libxext6 \
+    libxrender1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Set working directory
@@ -50,6 +54,8 @@ COPY app.py .
 # Set environment variables
 ENV FLASK_APP=app.py
 ENV FLASK_RUN_HOST=0.0.0.0
+ENV DISPLAY=:0
+ENV LIBGL_ALWAYS_SOFTWARE=1
 
 # Expose port 5000 (Flask default)
 EXPOSE 5000
