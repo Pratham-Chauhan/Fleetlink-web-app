@@ -5,3 +5,4 @@ flask
 camoufox
 requests
 python-dotenv
+gunicorn

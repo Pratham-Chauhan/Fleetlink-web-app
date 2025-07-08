@@ -58,7 +58,13 @@ ENV DISPLAY=:0
 ENV LIBGL_ALWAYS_SOFTWARE=1
 
 # Expose port 5000 (Flask default)
-EXPOSE 5000
+# EXPOSE 5000
+
+# Expose the port Gunicorn will listen on
+EXPOSE 8000
 
 # Command to run your Flask app
-CMD ["flask", "run"]
+# CMD ["flask", "run"]
+
+# Command to run Gunicorn (with 2 workers, adjustable)
+CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8000", "--workers", "2"]

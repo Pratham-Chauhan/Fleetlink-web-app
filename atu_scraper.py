@@ -14,7 +14,7 @@ import threading
 
 
 class ATUScraper:
-    def __init__(self, data, timestamp):
+    def __init__(self, data, timestamp, browser_type):
         self.data = data
         self.timestamp = timestamp
         self.page = None
@@ -23,7 +23,7 @@ class ATUScraper:
         self.logger = self.setup_logger()
         self.input_file = "./fleetlink_id_mapping.xlsx"
 
-        self.BROWSER_TYPE = 'Camoufox'
+        self.BROWSER_TYPE = browser_type
         self.HEADLESS = True
 
     def setup_logger(self):
@@ -428,5 +428,5 @@ if __name__ == "__main__":
     }
 
     timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
-    scraper = ATUScraper(test_data, timestamp)
+    scraper = ATUScraper(test_data, timestamp, browser_type='Camoufox')
     scraper.run()
