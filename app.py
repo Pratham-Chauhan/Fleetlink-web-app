@@ -190,11 +190,11 @@ def webhook():
 
     # Run scraper in a background thread
     # thread = Thread(target=run_scraper, args=(test_data,timestamp))
-    # thread = Thread(target=lambda: ATUScraper(data, timestamp, browser_type).run())
-    # thread.start()
+    thread = Thread(target=lambda: ATUScraper(data, timestamp, browser_type).run())
+    thread.start()
 
-    p = Process(target=lambda: ATUScraper(data, timestamp, browser_type).run())
-    p.start()
+    # p = Process(target=lambda: ATUScraper(data, timestamp, browser_type).run())
+    # p.start()
 
     return jsonify({"status": "Scraper started", "timestamp": timestamp}), 200
 
