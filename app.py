@@ -1,7 +1,7 @@
 # app.py
 from tasks import run_scraper
 from datetime import datetime
-from flask import Flask, render_template, render_template_string, request, jsonify, send_from_directory, abort, safe_join
+from flask import Flask, render_template, render_template_string, request, jsonify, send_from_directory, abort
 from threading import Thread
 from multiprocessing import Process
 
