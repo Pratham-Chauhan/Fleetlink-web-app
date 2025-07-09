@@ -1,7 +1,7 @@
 # app.py
 from tasks import run_scraper
 from datetime import datetime
-from flask import Flask, render_template, render_template_string, request, jsonify
+from flask import Flask, render_template, render_template_string, request, jsonify, send_from_directory, abort, safe_join
 from threading import Thread
 from multiprocessing import Process
 
@@ -9,6 +9,7 @@ from atu_scraper import ATUScraper
 import os
 
 app = Flask(__name__)
+LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
 
 
 @app.route('/')
@@ -171,6 +172,26 @@ def webhook():
 
     return jsonify({"status": "Scraper started", "timestamp": timestamp}), 200
 
+@app.route("/logs", methods=["GET"])
+def list_log_files():
+    """List all log files in the logs/ directory."""
+    try:
+        files = [f for f in os.listdir(LOG_DIR) if f.endswith(".log")]
+        return jsonify({"log_files": files})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route("/logs/<filename>", methods=["GET"])
+def get_log_file(filename):
+    """Serve a specific log file content."""
+    if not filename.endswith(".log") or "/" in filename or ".." in filename:
+        abort(400, description="Invalid filename")
+
+    try:
+        return send_from_directory(LOG_DIR, filename, mimetype="text/plain")
+    except FileNotFoundError:
+        abort(404, description="Log file not found")
 
 if __name__ == '__main__':
     # app.run(debug=True)
