@@ -6,6 +6,8 @@ RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
     unzip \
+    supervisor \
+    redis-server \
     fonts-liberation \
     libnss3 \
     libatk-bridge2.0-0 \
@@ -14,9 +16,6 @@ RUN apt-get update && apt-get install -y \
     libasound2 \
     libx11-xcb1 \
     libgbm1 \
-    libgtk-3-0 \
-    libx11-xcb1 \
-    libasound2 curl \
     libgl1-mesa-glx \
     libx11-6 \
     libxext6 \
@@ -26,45 +25,34 @@ RUN apt-get update && apt-get install -y \
 # Set working directory
 WORKDIR /app
 
-# Install Opera Browser
+# Install Opera
 RUN curl https://deb.opera.com/archive.key | apt-key add -
 RUN echo deb https://deb.opera.com/opera-stable/ stable non-free | tee /etc/apt/sources.list.d/opera.list
-RUN apt update
-RUN apt install -y opera-stable
+RUN apt update && apt install -y opera-stable
 
-
-# Install Python dependencies
+# Copy requirements and install Python deps
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --upgrade pip && pip install -r requirements.txt
 
-# Install Playwright browsers
-RUN playwright install chromium firefox
-RUN python -m camoufox fetch
+# Install Playwright and camoufox
+RUN playwright install chromium
+# RUN playwright install chromium firefox
+# RUN python -m camoufox fetch
 
 # Copy your project files
-COPY atu_scraper.py .
-COPY fleetlink_id_mapping.xlsx .
+COPY . .
 
-# Command to run your script 
-# CMD ["python", "atu_scraper.py"]
+# Supervisor config
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
-# Copy your Flask app and other project files
-COPY app.py .
-
-# Set environment variables
+# Environment variables
 ENV FLASK_APP=app.py
 ENV FLASK_RUN_HOST=0.0.0.0
 ENV DISPLAY=:0
 ENV LIBGL_ALWAYS_SOFTWARE=1
+ENV CELERY_BROKER_URL=redis://localhost:6379/0
 
-# Expose port 5000 (Flask default)
-# EXPOSE 5000
-
-# Expose the port Gunicorn will listen on
 EXPOSE 8000
 
-# Command to run your Flask app
-# CMD ["flask", "run"]
-
-# Command to run Gunicorn (with 2 workers, adjustable)
-CMD ["gunicorn", "app:app", "--bind", "0.0.0.0:8000", "--workers", "2"]
+# Start all processes via Supervisor
+CMD ["supervisord", "-n"]

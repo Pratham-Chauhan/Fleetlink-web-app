@@ -1,4 +1,5 @@
 # app.py
+from tasks import run_scraper
 from datetime import datetime
 from flask import Flask, render_template, render_template_string, request, jsonify
 from threading import Thread
@@ -8,6 +9,7 @@ from atu_scraper import ATUScraper
 import os
 
 app = Flask(__name__)
+
 
 @app.route('/')
 def index():
@@ -146,57 +148,29 @@ def index():
 </html>
 ''')
 
+
 @app.route('/run-scraper', methods=['POST'])
 def webhook():
     data = request.get_json()
     browser_type = request.args.get("browser_type")
-    print("RECEIVED JSON DATA: ",data)
+    print("RECEIVED JSON DATA: ", data)
     timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
-    
-    # test_data = {
-    #     "pin_code": "64347",
-    #     "id_target": [26],
-    #     "target_service_group": [],
-    #     "service_name": [],
-
-    #     "target_manufacturer": "FORD",
-    #     "target_model": "KA",
-    #     "target_year": "2011",
-
-    #     "quantity_amount": "1",
-    #     "target_date": "12.06.2025",
-    #     "engine": "electric", 
-        
-    #     "your_data": {
-    #         "firstName": "Dominik",
-    #         "lastName": "Skakuj",
-    #         "email": "dominik.skakuj1234@gmail.com",
-    #         "mobile": "11111111111",
-    #         "Erreichbarkeit": "",
-    #         "licensePlate": "Da HI 2001",
-    #         "HSN": "",
-    #         "TSN": "",
-    #         "mileage": "",
-    #         "Radeinlagerungsnummer": "",
-    #         "Firmenname": "",
-    #         "Kundennummer": "",
-    #         "Anmerkung": ""
-    #     },
-    
-    # }
 
     if not data:
         return jsonify({"error": "Invalid JSON"}), 400
 
     # Run scraper in a background thread
     # thread = Thread(target=run_scraper, args=(test_data,timestamp))
-    thread = Thread(target=lambda: ATUScraper(data, timestamp, browser_type).run())
-    thread.start()
-
+    # thread = Thread(target=lambda: ATUScraper(data, timestamp, browser_type).run())
+    # thread.start()
     # p = Process(target=lambda: ATUScraper(data, timestamp, browser_type).run())
     # p.start()
 
+    # Use Celery instead of thread
+    run_scraper.delay(data, timestamp, browser_type)
+
     return jsonify({"status": "Scraper started", "timestamp": timestamp}), 200
+
 
 if __name__ == '__main__':
     # app.run(debug=True)

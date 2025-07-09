@@ -7,3 +7,5 @@ requests
 python-dotenv
 gunicorn
 tenacity
+celery 
+redis
