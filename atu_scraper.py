@@ -11,6 +11,7 @@ import os
 import sys
 import logging
 import threading
+from tenacity import *
 
 
 class ATUScraper:
@@ -41,8 +42,11 @@ class ATUScraper:
 
         file_handler = logging.FileHandler(log_file)
         console_handler = logging.StreamHandler()
-        formatter = logging.Formatter('[%(asctime)s] %(levelname)s - %(message)s', '%Y-%m-%d %H:%M:%S')
+        
+        formatter = logging.Formatter('[%(asctime)s] [Thread-%(thread)d] %(levelname)s - %(message)s', '%Y-%m-%d %H:%M:%S')
         file_handler.setFormatter(formatter)
+        console_handler.setFormatter(formatter)
+
         logger.addHandler(file_handler)
         logger.addHandler(console_handler)
 
@@ -111,10 +115,10 @@ class ATUScraper:
         sleep(random.uniform(min_sec, max_sec))
 
     def click_any_bt(self, elem: Locator):
-        for _ in range(3):
+        for _ in range(4):
             try:
                 sleep(random.uniform(1, 3))
-                elem.wait_for(state='visible', timeout=5000)
+                elem.wait_for(state='visible', timeout=5000*3)
                 elem.click()
                 self.logger.info('Clicked: %s', elem)
                 sleep(random.uniform(1, 3))
@@ -142,6 +146,12 @@ class ATUScraper:
         select.select_option(selector_target)
         self.wait_random(2, 6)
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=2, min=2, max=10),
+        # before=before_log(self.logger, logging.WARNING),
+        reraise=True
+    )
     def branch_selection_part(self):
         self.wait_random(2, 5)
         try:
@@ -162,10 +172,10 @@ class ATUScraper:
         self.logger.info('Waiting for branch entries to load...')
         branch_loaded = False
 
-        for i in range(3):
+        for i in range(4):
             self.page.keyboard.press('Enter')
             try:
-                self.page.locator('.branch-list-entry').first.wait_for(state='visible', timeout=30000)
+                self.page.locator('.branch-list-entry').first.wait_for(state='visible', timeout=30000*3)
                 self.logger.info('Branch entries loaded successfully!')
                 branch_loaded = True
                 sleep(0.5)
@@ -179,6 +189,12 @@ class ATUScraper:
 
         self.click_any_bt(self.page.locator('.branch-list-entry').first)
 
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=2, min=2, max=10),
+        # before=before_log(self.logger, logging.WARNING),
+        reraise=True
+    )
     def service_selection_part(self):
         self.logger.info("\n###### Service Selection ######\n")
         self.wait_random(3, 6)
@@ -251,7 +267,7 @@ class ATUScraper:
 
             try:
                 quantity = self.page.locator('select[name="service-amount"]').first
-                quantity.wait_for(state='visible', timeout=5000)
+                quantity.wait_for(state='visible', timeout=5000*3)
                 quantity.select_option(qty)
                 self.logger.info(f'Quantity changed to {qty}')
             except:
@@ -285,7 +301,12 @@ class ATUScraper:
                 choose_service_name(self.data['service_name'][i], self.data['quantity_amount'])
 
         self.click_any_bt(self.page.locator('.btn.btn-primary.next').first)
-
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=2, min=2, max=10),
+        # before=before_log(self.logger, logging.WARNING),
+        reraise=True
+    )
     def appointment_selection_part(self):
         self.logger.info("\n###### Appointment Section ######\n")
         self.wait_random(4, 6)
@@ -316,7 +337,12 @@ class ATUScraper:
             self.logger.warning('Date Selection Error, keeping the default date')
 
         self.click_any_bt(self.page.locator(".btn.btn-primary.btn-big").first)
-
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=2, min=2, max=10),
+        # before=before_log(self.logger, logging.WARNING),
+        reraise=True
+    )
     def your_data_section(self):
         self.logger.info("\n###### Your Data Section ######\n")
         self.wait_random(2, 4)
@@ -371,27 +397,40 @@ class ATUScraper:
             print(r.json())
 
     def run(self):
+        try:
+            self.logger.info("Scraper started with data: %s", self.data)
+            self.find_fleetlink_services()
+            self.logger.info("Starting ATU automation...")
 
-        self.logger.info("Scraper started with data: %s", self.data)
-        self.find_fleetlink_services()
-        self.logger.info("Starting ATU automation...")
+            self.page = self.launch_driver(self.BROWSER_TYPE, self.HEADLESS)
+            self.page.goto("https://www.atu.de/terminvereinbarung/", timeout=60000*3)
+            self.logger.info("Page loaded successfully")
 
-        self.page = self.launch_driver(self.BROWSER_TYPE, self.HEADLESS)
-        self.page.goto("https://www.atu.de/terminvereinbarung/", timeout=60000)
-        self.logger.info("Page loaded successfully")
+            self.branch_selection_part()
+            self.service_selection_part()
+            self.appointment_selection_part()
+            self.your_data_section()
 
-        self.branch_selection_part()
-        self.service_selection_part()
-        self.appointment_selection_part()
-        self.your_data_section()
+            # Full-page screenshot
+            self.page.screenshot(path=f"screenshots/{self.timestamp}.png", full_page=True)
+            
+            self.send_to_telegram(f'./screenshots/{self.timestamp}.png')
 
-        # Full-page screenshot
-        self.page.screenshot(path=f"screenshots/{self.timestamp}.png", full_page=True)
-        
-        self.send_to_telegram(f'./screenshots/{self.timestamp}.png')
+            self.logger.info('Script completed.')
+            self.page.close()
 
-        self.logger.info('Script completed.')
-        self.page.close()
+
+        except RetryError as e:
+            self.logger.error(f"Retry limit exceeded: {e}")
+            if hasattr(self, 'page') and self.page:
+                self.page.close()
+            sys.exit(1)
+
+        except Exception as e:
+            self.logger.error(f"Unhandled exception: {e}")
+            if hasattr(self, 'page') and self.page:
+                self.page.close()
+            sys.exit(1)
 
 
 load_dotenv()

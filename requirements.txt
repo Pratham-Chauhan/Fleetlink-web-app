@@ -6,3 +6,4 @@ camoufox
 requests
 python-dotenv
 gunicorn
+tenacity

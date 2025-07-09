@@ -2,6 +2,8 @@
 from datetime import datetime
 from flask import Flask, render_template, render_template_string, request, jsonify
 from threading import Thread
+from multiprocessing import Process
+
 from atu_scraper import ATUScraper
 import os
 
@@ -188,11 +190,14 @@ def webhook():
 
     # Run scraper in a background thread
     # thread = Thread(target=run_scraper, args=(test_data,timestamp))
-    thread = Thread(target=lambda: ATUScraper(data, timestamp, browser_type).run())
-    thread.start()
+    # thread = Thread(target=lambda: ATUScraper(data, timestamp, browser_type).run())
+    # thread.start()
+
+    p = Process(target=lambda: ATUScraper(data, timestamp, browser_type).run())
+    p.start()
 
     return jsonify({"status": "Scraper started", "timestamp": timestamp}), 200
 
 if __name__ == '__main__':
     # app.run(debug=True)
-    app.run(debug=False, host='0.0.0.0', port=5000)
+    app.run(debug=False, host='0.0.0.0', port=8000)
