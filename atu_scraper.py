@@ -48,7 +48,7 @@ class ATUScraper:
         # console_handler.setFormatter(formatter)
 
         logger.addHandler(file_handler)
-        logger.addHandler(console_handler)
+        # logger.addHandler(console_handler)
 
         return logger
 
@@ -414,7 +414,10 @@ class ATUScraper:
             # Full-page screenshot
             self.page.screenshot(path=f"screenshots/{self.timestamp}.png", full_page=True)
             
-            self.send_to_telegram(f'./screenshots/{self.timestamp}.png')
+            try:
+                self.send_to_telegram(f'./screenshots/{self.timestamp}.png')
+            except:
+                self.logger.warning('Failed to send result to Telegram.')
 
             self.logger.info('Script completed.')
             self.page.close()

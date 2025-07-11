@@ -153,7 +153,7 @@ def index():
 @app.route('/run-scraper', methods=['POST'])
 def webhook():
     data = request.get_json()
-    browser_type = request.args.get("browser_type")
+    browser_type = request.args.get("browser_type", "Opera")
     print("RECEIVED JSON DATA: ", data)
     timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
 
@@ -164,6 +164,8 @@ def webhook():
     # thread = Thread(target=run_scraper, args=(test_data,timestamp))
     # thread = Thread(target=lambda: ATUScraper(data, timestamp, browser_type).run())
     # thread.start()
+
+    # Run scraper in a separate process
     # p = Process(target=lambda: ATUScraper(data, timestamp, browser_type).run())
     # p.start()
 
