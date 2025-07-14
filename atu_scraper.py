@@ -18,7 +18,10 @@ class ATUScraper:
     def __init__(self, data, timestamp, browser_type):
         self.data = data
         self.timestamp = timestamp
+        self.browser = None 
         self.page = None
+        self.playwright = None
+
         self.thread_id = threading.get_ident()
 
         self.logger = self.setup_logger()
@@ -53,6 +56,7 @@ class ATUScraper:
         return logger
 
     def launch_driver(self, browser_type, headless):
+        self.logger.info('Launching driver...')
         if browser_type == 'Camoufox':
             try:
                 from camoufox.sync_api import Camoufox
@@ -84,7 +88,7 @@ class ATUScraper:
             page = context.new_page()
 
         self.logger.info('Browser Type: %s', browser_type)
-        return page
+        return page, browser, playwright
 
     def find_opera_path(self):
         system = platform.system()
@@ -402,7 +406,8 @@ class ATUScraper:
             self.find_fleetlink_services()
             self.logger.info("Starting ATU automation...")
 
-            self.page = self.launch_driver(self.BROWSER_TYPE, self.HEADLESS)
+            self.page, self.browser, self.playwright = self.launch_driver(self.BROWSER_TYPE, self.HEADLESS)
+
             self.page.goto("https://www.atu.de/terminvereinbarung/", timeout=60000*3)
             self.logger.info("Page loaded successfully")
 
@@ -421,6 +426,10 @@ class ATUScraper:
 
             self.logger.info('Script completed.')
             self.page.close()
+
+            # Close the browser
+            self.browser.close()
+            self.playwright.stop()
 
 
         except RetryError as e:
@@ -470,5 +479,5 @@ if __name__ == "__main__":
     }
 
     timestamp = datetime.now().strftime('%Y%m%d-%H%M%S')
-    scraper = ATUScraper(test_data, timestamp, browser_type='Camoufox')
+    scraper = ATUScraper(test_data, timestamp, browser_type='Opera')
     scraper.run()
